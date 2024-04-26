@@ -1,0 +1,64 @@
+---
+- name: automate ansible and launch wordpress in docker container
+  hosts: all
+  tasks:
+      - yum:
+             name: dnf-plugins-core
+             state: present
+      - name: setup docker repo
+        shell:
+            cmd: dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+      - name: install docker
+        yum:
+            name: docker-ce
+            state: present
+
+      - name: status
+        service:
+            name: docker
+            state: started
+            enabled: yes
+
+      - name: "pull the image of sql"
+        community.docker.docker_image:
+            name: "mysql:latest"
+            source: pull
+
+      - name: "pull the image of wordpress"
+        community.docker.docker_image:
+            name: "wordpress:latest"
+            source: pull
+
+      - name: making the directory for volume persistent
+        file:
+            path: "/data"
+            state: directory
+
+      - name: "container launch of sql server"
+        community.docker.docker_container:
+            name: "mysqlserver"
+            state: started
+            image: "mysql:latest"
+            env:
+               MYSQL_ROOT_PASSWORD: redhat
+               MYSQL_DATABASE: mysqlserver
+            volumes:
+                 - /data:/var/lib/mysql - name: "deploy wordpress"
+      
+     - name: " launch wordpress"
+        community.docker.docker_container:
+            name: "server"
+            state: started
+            image: "wordpress:latest"
+            env:
+               WORDPRESS_DB_HOST: mysqlserver
+               WORDPRESS_DB_USER: root
+               WORDPRESS_DB_PASSWORD: redhat
+               WORDPRESS_DB_NAME: mysqlserver
+            links:
+                 - "mysqlserver"
+            ports:
+                - 8080:80
+
+
+
